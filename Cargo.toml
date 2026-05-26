@@ -5,20 +5,20 @@ edition = "2024"
 description = "Synchronized lyrics overlay for macOS"
 
 [package.metadata.bundle]
-name = "Lyrane"
+name = "Lyrane (SONOS)"
 identifier = "com.thatmarcel.apps.lyrane"
 icon = ["assets/icon-32x32.png", "assets/icon-128x128.png", "assets/icon-128x128@2x.png"]
 category = "public.app-category.music"
 
 [dependencies.anyhow]
-version = "1.0.100"
+version = "1.0.102"
 
 [dependencies.serde]
 version = "1.0.228"
 features = ["derive"]
 
 [dependencies.serde_json]
-version = "1.0.149"
+version = "1.0.150"
 
 [dependencies.objc2]
 version = "0.6.4"
@@ -47,3 +47,6 @@ features = ["termination"]
 [dependencies.ureq]
 version = "3.3.0"
 features = ["brotli", "json"]
+
+[dependencies.sonos-sdk]
+version = "0.5.2"

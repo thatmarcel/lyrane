@@ -1,6 +1,6 @@
 use std::cell::OnceCell;
 use std::fs::File;
-use std::sync::Arc;
+use std::sync::{Arc};
 use anyhow::anyhow;
 use dispatch2::{DispatchQueue, DispatchQueueGlobalPriority, GlobalQueueIdentifier};
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadMarker, MainThreadOnly};
@@ -16,8 +16,10 @@ use crate::now_playing_update_listener::NowPlayingUpdateListener;
 use crate::now_playing_update_message::{NowPlayingInfo};
 use crate::now_playing_update_script::create_now_playing_update_script_file;
 use crate::persistent_stored_config::{load_persistent_config, remove_lock_file, store_persistent_config_from_app_window};
+use crate::sonos_now_playing::{SonosNowPlaying};
 
-#[derive(Debug)]
+const SHOULD_USE_SONOS: bool = true;
+
 pub struct LyraneAppDelegateIvars {
     lock_file: Arc<File>,
     window: OnceCell<Retained<AppWindow>>,
@@ -25,6 +27,7 @@ pub struct LyraneAppDelegateIvars {
     lyrics_line_text_view: OnceCell<Retained<NSTextField>>,
     temp_script_file_path_string: OnceCell<String>,
     lyrics_syncer: OnceCell<Arc<LyricsSyncer>>,
+    sonos_now_playing: OnceCell<Arc<SonosNowPlaying>>,
 }
 
 define_class!(
@@ -107,7 +110,8 @@ impl LyraneAppDelegate {
             window_effect_view: Default::default(),
             lyrics_line_text_view: Default::default(),
             temp_script_file_path_string: Default::default(),
-            lyrics_syncer: Default::default()
+            lyrics_syncer: Default::default(),
+            sonos_now_playing: Default::default()
         });
 
         unsafe {
@@ -169,12 +173,19 @@ impl LyraneAppDelegate {
             std::process::exit(0i32);
         })?;
 
-        DispatchQueue::global_queue(
-            GlobalQueueIdentifier::Priority(DispatchQueueGlobalPriority::Default)
-        ).exec_async(move || {
-            NowPlayingUpdateListener::start_on_current_thread(&temp_script_file_path_string)
-                .expect("Failed to start now playing update listener");
-        });
+        if SHOULD_USE_SONOS {
+            self.ivars().sonos_now_playing.set(
+                SonosNowPlaying::start_new_on_current_thread()
+                    .expect("Failed to start Sonos now playing object")
+            ).map_err(|_| anyhow!("The Sonos now playing object has already been set"))?;
+        } else {
+            DispatchQueue::global_queue(
+                GlobalQueueIdentifier::Priority(DispatchQueueGlobalPriority::Default)
+            ).exec_async(move || {
+                NowPlayingUpdateListener::start_on_current_thread(&temp_script_file_path_string)
+                    .expect("Failed to start now playing update listener");
+            });
+        }
 
         self.ivars().lyrics_syncer.set(
             LyricsSyncer::new(
@@ -264,7 +275,8 @@ impl LyraneAppDelegate {
         &self,
         now_playing_info: Option<NowPlayingInfo>,
         has_item_changed: bool,
-        _has_playback_rate_changed: bool
+        _has_playback_rate_changed: bool,
+        _is_from_sonos: bool
     ) -> anyhow::Result<()> {
         let app_window = self.ivars().window.get().ok_or(anyhow!("Failed to get app window"))?;
 
@@ -277,8 +289,6 @@ impl LyraneAppDelegate {
 
         if let Some(now_playing_info) = now_playing_info {
             if has_item_changed {
-                // println!("{:?} is now playing", now_playing_info);
-
                 *lyrics_syncer_lyrics_arc.lock().expect("Failed to obtain lock") = None;
 
                 app_window.setIsVisible(false);
@@ -311,7 +321,7 @@ impl LyraneAppDelegate {
     pub fn handle_right_click(&self, event: &NSEvent, view: &NSView) {
         let menu = NSMenu::initWithTitle(
             NSMenu::alloc(self.mtm()),
-            ns_string!("Lyrane")
+            ns_string!("Lyrane (SONOS)")
         );
 
         unsafe {

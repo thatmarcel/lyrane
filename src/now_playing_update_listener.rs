@@ -50,7 +50,8 @@ impl NowPlayingUpdateListener {
                     Self::call_now_playing_update_handler(
                         None,
                         true,
-                        true
+                        true,
+                        false
                     );
 
                     prev_info = None;
@@ -67,7 +68,8 @@ impl NowPlayingUpdateListener {
                     Self::call_now_playing_update_handler(
                         Some(now_playing_info),
                         has_item_changed,
-                        has_playback_rate_changed
+                        has_playback_rate_changed,
+                        false
                     )
                 }
             }
@@ -78,10 +80,11 @@ impl NowPlayingUpdateListener {
         Ok(())
     }
 
-    fn call_now_playing_update_handler(
+    pub fn call_now_playing_update_handler(
         now_playing_info: Option<NowPlayingInfo>,
         has_item_changed: bool,
-        has_playback_rate_changed: bool
+        has_playback_rate_changed: bool,
+        is_from_sonos: bool
     ) {
         DispatchQueue::main().exec_async(move || {
             let app = NSApplication::sharedApplication(
@@ -96,7 +99,8 @@ impl NowPlayingUpdateListener {
             if let Err(error) = app_delegate.handle_now_playing_update(
                 now_playing_info,
                 has_item_changed,
-                has_playback_rate_changed
+                has_playback_rate_changed,
+                is_from_sonos
             ) {
                 println!("{:?}", error);
             }

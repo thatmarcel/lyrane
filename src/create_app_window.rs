@@ -28,7 +28,7 @@ pub fn create_app_window(mtm: MainThreadMarker) -> anyhow::Result<(Retained<AppW
 
         window.setReleasedWhenClosed(false);
 
-        window.setTitle(ns_string!("Lyrane"));
+        window.setTitle(ns_string!("Lyrane (SONOS)"));
 
         let content_view = NSView::initWithFrame(
             NSView::alloc(mtm),

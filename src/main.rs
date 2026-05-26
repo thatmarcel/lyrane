@@ -13,6 +13,7 @@ mod lyrics_line;
 mod lyrics_syncer;
 mod app_window;
 mod persistent_stored_config;
+mod sonos_now_playing;
 
 fn main() -> anyhow::Result<()> {
     let Some(lock_file) = create_lock_file() else {
